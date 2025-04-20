@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Monitor del Sistema</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+    h1 { color: #333; }
+    pre { background: white; padding: 10px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Información del Sistema (actualización cada 1 hora)</h1>
+  <pre id="info">Cargando...</pre>
+
+  <script>
+    const socket = io();
+    socket.on('datosSistema', (datos) => {
+      document.getElementById('info').textContent = JSON.stringify(datos, null, 2);
+    });
+  </script>
+</body>
+</html>

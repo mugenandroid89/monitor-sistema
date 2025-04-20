@@ -2,10 +2,18 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const si = require('systeminformation');
+const cors = require('cors');
 
 const app = express();
+app.use(cors()); // Permitir CORS para todas las rutas
+
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: '*', // Permitir cualquier origen (ideal para pruebas)
+        methods: ['GET', 'POST']
+    }
+});
 
 function bytesToGB(bytes) {
     return (bytes / (1024 ** 3)).toFixed(2) + ' GB';
@@ -21,9 +29,8 @@ async function obtenerDatosSistema() {
             si.networkInterfaces()
         ]);
 
-        // Procesar particiones (sda1 y swap)
         const sda1 = discos.find(d => d.mount === '/') || null;
-        const swapSize = memoria.swaptotal > 0 ? memoria.swaptotal : 975 * 1024 * 1024; // Fallback: 975 MB
+        const swapSize = memoria.swaptotal > 0 ? memoria.swaptotal : 975 * 1024 * 1024;
 
         const sda5 = {
             fs: '/dev/sda5',
@@ -33,7 +40,6 @@ async function obtenerDatosSistema() {
             use: memoria.swaptotal > 0 ? ((memoria.swapused / memoria.swaptotal) * 100).toFixed(2) + '%' : '0%'
         };
 
-        // Datos de red
         const red = await Promise.all(
             interfaces.map(async (iface) => {
                 const stats = await si.networkStats(iface.iface);
@@ -88,12 +94,12 @@ async function obtenerDatosSistema() {
     }
 }
 
-// Ruta de prueba
+// Ruta básica
 app.get('/', (req, res) => {
     res.send('Servidor de monitoreo activo. Usa <a href="/api/sistema">/api/sistema</a>');
 });
 
-// API REST
+// API REST para probar por navegador o fetch
 app.get('/api/sistema', async (req, res) => {
     try {
         const datos = await obtenerDatosSistema();
@@ -113,7 +119,7 @@ io.on('connection', (socket) => {
         } catch (error) {
             console.error('Error en WebSocket:', error);
         }
-    }, 5000); // Envia datos cada 5 segundos
+    }, 5000);
 
     socket.on('disconnect', () => {
         clearInterval(intervalo);
@@ -123,6 +129,9 @@ io.on('connection', (socket) => {
 
 // Iniciar servidor
 const PORT = 3000;
-server.listen(PORT, () => {
+/*server.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});*/
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
 });
